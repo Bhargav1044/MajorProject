@@ -1,0 +1,28 @@
+# Python virtual environments
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+
+# Audio files
+*.wav
+*.webm
+temp/
+output/
+
+# Model caches
+.cache/
+.huggingface/
+torch_cache/
+
+# Environment
+.env
