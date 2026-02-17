@@ -56,13 +56,11 @@ def translate_to_gujarati(text: str) -> str:
     """
     return _translate(text, "guj_Gujr")
 
-
 def translate(text: str, target_language: str) -> str:
-    """
-    Dispatcher used by API.
-    """
-    if target_language == "gujarati":
+    if target_language == "gu":
         return translate_to_gujarati(text)
 
-    # Default fallback
-    return translate_to_marathi(text)
+    if target_language == "mr":
+        return translate_to_marathi(text)
+
+    raise ValueError(f"Unsupported target language: {target_language}")

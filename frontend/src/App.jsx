@@ -11,9 +11,10 @@ export default function App() {
   const [language, setLanguage] = useState("marathi");
   const [liveBlob, setLiveBlob] = useState(null);
   
-
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const [engine, setEngine] = useState("auto");
+  const [ttsAudioUrl, setTtsAudioUrl] = useState(null);
 
   function clearOutput() {
   setResult("");
@@ -33,7 +34,8 @@ export default function App() {
 
     const formData = new FormData();
     formData.append("audio", file);
-    formData.append("language", language); 
+    formData.append("language", language);
+    formData.append("engine", engine); 
 
     try {
       const res = await fetch("http://localhost:5000/api/process-audio", {
@@ -43,6 +45,12 @@ export default function App() {
 
       const data = await res.json();
       setResult(data.translated || data.error);
+        if (data.tts_audio_file) {
+          setTtsAudioUrl(`http://localhost:5000/${data.tts_audio_file}`);
+        } else {
+          setTtsAudioUrl(null);
+      }
+
     } catch (err) {
       setResult("Error while processing audio.");
     } finally {
@@ -77,7 +85,7 @@ export default function App() {
     const audioUrl = URL.createObjectURL(blob);
     setLiveAudioUrl(audioUrl);
 
-    setLiveBlob(blob);     // 👈 store for later translation
+    setLiveBlob(blob); 
     chunksRef.current = [];
   };
 }
@@ -95,6 +103,7 @@ async function translateLiveAudio() {
   const formData = new FormData();
   formData.append("audio", liveBlob, "live.webm");
   formData.append("language", language);
+  formData.append("engine", engine);
 
   try {
     const res = await fetch("http://127.0.0.1:5000/api/process-audio", {
@@ -104,6 +113,11 @@ async function translateLiveAudio() {
 
     const data = await res.json();
     setResult(data.translated);
+      if (data.tts_audio_file) {
+        setTtsAudioUrl(`http://localhost:5000/${data.tts_audio_file}`);
+      } else {
+        setTtsAudioUrl(null);
+    }
   } catch (err) {
     setResult("Network error while processing live audio.");
   } finally {
@@ -155,6 +169,18 @@ async function translateLiveAudio() {
             </div>
 
             <div className="row">
+              <label style={{ fontSize: "14px" }}>TTS Engine:</label>
+              <select
+                value={engine}
+                onChange={(e) => setEngine(e.target.value)}
+              >
+                <option value="auto">Auto (Indic → XTTS)</option>
+                <option value="indic">Indic Parler</option>
+                <option value="xtts">Coqui XTTS</option>
+              </select>
+            </div>
+
+            <div className="row">
               <label className="file-upload-label">
                 Choose File
                 <input
@@ -197,6 +223,12 @@ async function translateLiveAudio() {
                   <p>{result}</p>
                 </>
               ) : ( "Your translated text will appear here...")}
+              {ttsAudioUrl && (
+                <>
+                  <div className="section-title">Generated Speech</div>
+                  <audio controls src={ttsAudioUrl} style={{ width: "100%" }} />
+                </>
+              )}
             </div>
           </div>
         )}
@@ -220,6 +252,18 @@ async function translateLiveAudio() {
               >
                 <option value="marathi">Marathi</option>
                 <option value="gujarati">Gujarati</option>
+              </select>
+            </div>
+
+            <div className="row">
+              <label style={{ fontSize: "14px" }}>TTS Engine:</label>
+              <select
+                value={engine}
+                onChange={(e) => setEngine(e.target.value)}
+              >
+                <option value="auto">Auto (Indic → XTTS)</option>
+                <option value="indic">Indic Parler</option>
+                <option value="xtts">Coqui XTTS</option>
               </select>
             </div>
 
@@ -264,6 +308,12 @@ async function translateLiveAudio() {
 
             <div className="result-box">
               {result || "Your translated text will appear here..."}
+              {ttsAudioUrl && (
+                <>
+                  <div className="section-title">Generated Speech</div>
+                  <audio controls src={ttsAudioUrl} style={{ width: "100%" }} />
+                </>
+              )}
             </div>
           </div>
         )}
