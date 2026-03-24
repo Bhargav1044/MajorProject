@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 import os
+import time
 from datetime import datetime
 import librosa
 from pydub import AudioSegment
@@ -83,6 +84,7 @@ def process_audio():
     final_audio_path = f"output/tts/tts_{timestamp}_{target_lang}.wav"
 
     try:
+        start_total = time.time()
         # --------------------------------------------------
         # 4. Save incoming audio
         # --------------------------------------------------
@@ -107,7 +109,10 @@ def process_audio():
         # --------------------------------------------------
         # 7. Speech → Text (English)
         # --------------------------------------------------
-        english_text = transcribe(audio_array)
+        start_asr = time.time()
+        english_text= transcribe(audio_array)
+        end_asr = time.time()
+        asr_latency = (end_asr - start_asr) *1000
 
         # --------------------------------------------------
         # 8. Translate English → target language
@@ -115,12 +120,17 @@ def process_audio():
         if not english_text or not english_text.strip():
             translated_text = "काहीही आवाज आढळला नाही. कृपया पुन्हा प्रयत्न करा."
         else:
+            start_mt = time.time()
             translated_text = translate(english_text, target_lang)
+            end_mt = time.time()
+            mt_latency = (end_mt - start_mt) * 1000
 
         # --------------------------------------------------
         # 9. Text → Speech (Indic Parler / XTTS)
         # --------------------------------------------------
         tts_audio_path = f"output/tts/{timestamp}.wav"
+
+        start_tts = time.time()
 
         synthesize_speech(
             text=translated_text,
@@ -128,6 +138,9 @@ def process_audio():
             output_path=tts_audio_path,
             engine=engine
         )
+
+        end_tts = time.time()
+        tts_latency = (end_tts - start_tts) * 1000
 
         # --------------------------------------------------
         # 10. Persist transcript
@@ -151,12 +164,21 @@ def process_audio():
         # 12. Return success response
         # --------------------------------------------------
         tts_filename = os.path.basename(tts_audio_path)
-
+        
+        end_total = time.time()
+        total_latency = (end_total - start_total) * 1000
+        
         return jsonify({
             "english": english_text,
             "translated": translated_text,
             "language": target_lang,
-            "tts_audio_file": f"/output/tts/{tts_filename}"
+            "tts_audio_file": f"/output/tts/{tts_filename}",
+            "latency_ms": {
+                "asr": asr_latency,
+                "mt": mt_latency,
+                "tts": tts_latency,
+                "total": total_latency
+                }
         })
 
     except Exception as e:
@@ -165,5 +187,5 @@ def process_audio():
             os.remove(temp_webm_path)
         if os.path.exists(temp_wav_path):
             os.remove(temp_wav_path)
-
+        
         return jsonify({"error": str(e)}), 500
